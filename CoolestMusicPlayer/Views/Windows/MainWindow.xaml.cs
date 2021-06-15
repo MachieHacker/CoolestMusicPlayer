@@ -14,6 +14,10 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Microsoft.Win32;
+using CoolestMusicPlayer.Views.Pages;
+using CoolestMusicPlayer.Core;
+using System.Windows.Controls.Primitives;
+using CoolestMusicPlayer.Core.Models;
 
 namespace CoolestMusicPlayer.Views.Windows
 {
@@ -22,17 +26,30 @@ namespace CoolestMusicPlayer.Views.Windows
     /// </summary>
     public partial class MainWindow : Window
     {
+        private Music previousTrack;
         private MediaPlayer mediaPlayer = new MediaPlayer();
+        private bool userIsDraggingSlider = false;
         public MainWindow()
         {
             InitializeComponent();
+            MainFrame.NavigationService.Navigate(new PlaylistPage());
         }
         private void PlayButton_Click(object sender, RoutedEventArgs e)
         {
             if (PlayButton.Content == "Play")
             {
                 PlayButton.Content = "Pause";
+                Music currentTrack = AudioManager.Playlist[0];
+                if (currentTrack != previousTrack)
+                {
+                    mediaPlayer.Open(new Uri(currentTrack.Source));
+                    previousTrack = currentTrack;
+                }
                 mediaPlayer.Play();
+                DispatcherTimer timer = new DispatcherTimer();
+                timer.Interval = TimeSpan.FromSeconds(1);
+                timer.Tick += timer_Tick;
+                timer.Start();
             }
             else
             {
@@ -43,17 +60,17 @@ namespace CoolestMusicPlayer.Views.Windows
 
         private void PrevButton_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "MP3 files (*.mp3)|*.mp3|All files (*.*)|*.*";
-            if (openFileDialog.ShowDialog() == true)
-            {
-                mediaPlayer.Open(new Uri(openFileDialog.FileName));
-            }
 
-            DispatcherTimer timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromSeconds(1);
-            timer.Tick += timer_Tick;
-            timer.Start();
+        }
+        private void ProgressSlider_DragStarted(object sender, DragStartedEventArgs e)
+        {
+            userIsDraggingSlider = true;
+        }
+
+        private void ProgressSlider_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            userIsDraggingSlider = false;
+            mediaPlayer.Position = TimeSpan.FromSeconds(ProgressSlider.Value);
         }
         void timer_Tick(object sender, EventArgs e)
         {
